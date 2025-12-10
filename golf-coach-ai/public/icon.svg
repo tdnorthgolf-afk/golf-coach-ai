@@ -1,0 +1,23 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="512" height="512" fill="#0a4d3c" rx="64"/>
+  
+  <!-- Golf Ball -->
+  <circle cx="256" cy="220" r="80" fill="white"/>
+  
+  <!-- Dimples -->
+  <circle cx="230" cy="200" r="6" fill="#0a4d3c" opacity="0.2"/>
+  <circle cx="256" cy="195" r="6" fill="#0a4d3c" opacity="0.2"/>
+  <circle cx="282" cy="200" r="6" fill="#0a4d3c" opacity="0.2"/>
+  <circle cx="245" cy="220" r="6" fill="#0a4d3c" opacity="0.2"/>
+  <circle cx="267" cy="220" r="6" fill="#0a4d3c" opacity="0.2"/>
+  <circle cx="230" cy="240" r="6" fill="#0a4d3c" opacity="0.2"/>
+  <circle cx="256" cy="245" r="6" fill="#0a4d3c" opacity="0.2"/>
+  <circle cx="282" cy="240" r="6" fill="#0a4d3c" opacity="0.2"/>
+  
+  <!-- Tee -->
+  <path d="M 246 300 L 266 300 L 260 320 L 252 320 Z" fill="#3b9978"/>
+  
+  <!-- AI Text -->
+  <text x="256" y="400" font-family="Arial, sans-serif" font-size="72" font-weight="bold" fill="white" text-anchor="middle">AI</text>
+</svg>

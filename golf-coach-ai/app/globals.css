@@ -1,0 +1,120 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 40% 96%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 198 70% 35%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 198 70% 35%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 205 30% 8%;
+    --foreground: 210 40% 98%;
+    --card: 205 25% 12%;
+    --card-foreground: 210 40% 98%;
+    --popover: 205 25% 12%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 198 70% 45%;
+    --primary-foreground: 205 30% 8%;
+    --secondary: 205 20% 18%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 205 20% 18%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 205 20% 18%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 50.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 205 20% 18%;
+    --input: 205 20% 18%;
+    --ring: 198 70% 45%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer utilities {
+  .bg-gradient-golf {
+    background: linear-gradient(135deg, #1e3a5f 0%, #2d5a3d 100%);
+  }
+  
+  .text-shadow {
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .animate-fade-in {
+    animation: fade-in 0.3s ease-out;
+  }
+}
+
+.dark ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: hsl(var(--background));
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted));
+  border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground));
+}
+
+.lesson-notes h2 {
+  @apply text-xl font-bold mt-6 mb-3 text-primary;
+}
+
+.lesson-notes h3 {
+  @apply text-lg font-semibold mt-4 mb-2;
+}
+
+.lesson-notes ul {
+  @apply list-disc list-inside space-y-2 mb-4;
+}
+
+.lesson-notes ol {
+  @apply list-decimal list-inside space-y-3 mb-4;
+}
+
+.lesson-notes li {
+  @apply ml-4;
+}
+
+.lesson-notes strong {
+  @apply font-semibold text-primary;
+}
+
+.lesson-notes p {
+  @apply mb-3;
+}
