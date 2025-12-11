@@ -1,215 +1,242 @@
-'use client'
-
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { auth } from '@clerk/nextjs/server'
+import { redirect } from 'next/navigation'
+import { 
+  Target, 
+  BarChart3, 
+  Calendar, 
+  Users, 
+  Mic, 
+  Video,
+  ChevronRight,
+  Star,
+  Zap
+} from 'lucide-react'
 
-export default function PracticePlanPage() {
-  const [studentId, setStudentId] = useState<string | null>(null)
-  const [studentName, setStudentName] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [practicePlan, setPracticePlan] = useState<string | null>(null)
-  const [availableTime, setAvailableTime] = useState('60')
-  const [focusArea, setFocusArea] = useState('')
-  const router = useRouter()
+export default async function Home() {
+  const { userId } = await auth()
 
-  useEffect(() => {
-    const id = localStorage.getItem('studentId')
-    const name = localStorage.getItem('studentName')
-    
-    if (!id) {
-      router.push('/student-portal')
-      return
-    }
-
-    setStudentId(id)
-    setStudentName(name)
-  }, [])
-
-  const generatePlan = async () => {
-    if (!studentId) return
-    
-    setLoading(true)
-    setPracticePlan(null)
-
-    try {
-      const response = await fetch('/api/practice-plan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          studentId,
-          availableTime: parseInt(availableTime),
-          focusArea: focusArea || null,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to generate plan')
-      }
-
-      setPracticePlan(data.practicePlan)
-    } catch (error) {
-      console.error('Error:', error)
-      alert('Failed to generate practice plan. Please try again.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const formatPlan = (plan: string) => {
-    return plan.split('\n').map((line, index) => {
-      // Headers
-      if (line.startsWith('##')) {
-        return <h3 key={index} className="text-lg font-bold text-emerald-400 mt-4 mb-2">{line.replace(/^##\s*/, '')}</h3>
-      }
-      if (line.startsWith('#')) {
-        return <h2 key={index} className="text-xl font-bold text-white mt-4 mb-2">{line.replace(/^#\s*/, '')}</h2>
-      }
-      // Bold text
-      if (line.startsWith('**') && line.endsWith('**')) {
-        return <p key={index} className="font-bold text-white mt-3">{line.replace(/\*\*/g, '')}</p>
-      }
-      // Bullet points
-      if (line.startsWith('- ') || line.startsWith('• ')) {
-        return <p key={index} className="text-slate-300 ml-4 my-1">• {line.substring(2)}</p>
-      }
-      // Numbered items
-      if (/^\d+\./.test(line)) {
-        return <p key={index} className="text-slate-300 ml-4 my-1">{line}</p>
-      }
-      // Empty lines
-      if (line.trim() === '') {
-        return <div key={index} className="h-2" />
-      }
-      // Regular text
-      return <p key={index} className="text-slate-300 my-1">{line}</p>
-    })
+  if (userId) {
+    redirect('/dashboard')
   }
 
   return (
-    <div className="min-h-screen bg-slate-900">
-      <header className="border-b border-slate-700 bg-slate-800 p-4">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-emerald-400">🎯 AI Practice Plan</h1>
-            <p className="text-slate-400">Personalized training based on your stats</p>
+    <div className="min-h-screen bg-[#0A1A20]">
+      {/* Header */}
+      <header className="border-b border-[#D6C8B4]/10 bg-[#002D40]/80 backdrop-blur-md fixed top-0 left-0 right-0 z-50">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center font-serif text-2xl font-bold italic bg-[#E65722] text-white shadow-lg shadow-[#E65722]/40">
+                G
+              </div>
+              <div>
+                <h1 className="text-lg font-bold text-white">Golf Coach</h1>
+                <p className="text-xs font-medium tracking-widest text-[#E65722]">PERFORMANCE LAB</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <Link
+                href="/student-portal"
+                className="text-[#E8E3DC] hover:text-white text-sm font-medium transition-colors"
+              >
+                Student Portal
+              </Link>
+              <Link
+                href="/sign-in"
+                className="px-5 py-2.5 rounded-lg text-sm font-semibold transition-all bg-[#E65722] text-white hover:bg-[#E65722]/90"
+              >
+                Coach Login
+              </Link>
+            </div>
           </div>
-          <Link 
-            href="/student-portal/dashboard" 
-            className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg font-medium"
-          >
-            ← Back
-          </Link>
         </div>
       </header>
 
-      <main className="p-8 max-w-4xl mx-auto">
-        {/* Configuration */}
-        <div className="bg-slate-800 rounded-lg p-6 border border-slate-700 mb-6">
-          <h2 className="text-lg text-white mb-4">⚙️ Configure Your Practice Session</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="block text-slate-400 text-sm mb-2">Available Time</label>
-              <select
-                value={availableTime}
-                onChange={(e) => setAvailableTime(e.target.value)}
-                className="w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-4 py-3"
-              >
-                <option value="30">30 minutes</option>
-                <option value="45">45 minutes</option>
-                <option value="60">1 hour</option>
-                <option value="90">1.5 hours</option>
-                <option value="120">2 hours</option>
-                <option value="180">3 hours</option>
-              </select>
+      {/* Hero Section */}
+      <section className="pt-32 pb-20 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="max-w-3xl">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#E65722]/10 border border-[#E65722]/20 text-[#E65722] text-sm font-medium mb-6">
+              <Zap className="w-4 h-4" />
+              AI-Powered Golf Coaching Platform
             </div>
-            
-            <div>
-              <label className="block text-slate-400 text-sm mb-2">Focus Area (Optional)</label>
-              <select
-                value={focusArea}
-                onChange={(e) => setFocusArea(e.target.value)}
-                className="w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-4 py-3"
+            <h1 className="text-5xl md:text-6xl font-bold text-[#E8E3DC] leading-tight mb-6">
+              Elevate Your
+              <span className="text-[#E65722]"> Coaching </span>
+              Experience
+            </h1>
+            <p className="text-xl text-[#5F9EA0] mb-8 leading-relaxed">
+              The premium platform for elite golf coaches. AI-powered lesson transcription, 
+              strokes gained analytics, and seamless student management — all in one place.
+            </p>
+            <div className="flex flex-wrap gap-4">
+              <Link
+                href="/sign-up"
+                className="inline-flex items-center gap-2 px-8 py-4 rounded-xl text-lg font-semibold transition-all bg-[#E65722] text-white hover:bg-[#E65722]/90 shadow-lg shadow-[#E65722]/25"
               >
-                <option value="">Auto-detect from stats</option>
-                <option value="driving">Driving / Off the Tee</option>
-                <option value="irons">Iron Play / Approach</option>
-                <option value="short-game">Short Game / Around Green</option>
-                <option value="putting">Putting</option>
-                <option value="course-management">Course Management</option>
-                <option value="mental-game">Mental Game</option>
-              </select>
+                Start Free Trial
+                <ChevronRight className="w-5 h-5" />
+              </Link>
+              <Link
+                href="/student-portal"
+                className="inline-flex items-center gap-2 px-8 py-4 rounded-xl text-lg font-semibold transition-all bg-[#002D40] text-[#E8E3DC] border border-[#D6C8B4]/20 hover:border-[#E65722]"
+              >
+                I&apos;m a Student
+              </Link>
             </div>
           </div>
-
-          <button
-            onClick={generatePlan}
-            disabled={loading}
-            className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-600 text-white py-3 rounded-lg font-semibold text-lg flex items-center justify-center gap-2"
-          >
-            {loading ? (
-              <>
-                <span className="animate-spin">⏳</span>
-                Generating Your Plan...
-              </>
-            ) : (
-              <>
-                🤖 Generate Practice Plan
-              </>
-            )}
-          </button>
         </div>
+      </section>
 
-        {/* Practice Plan Display */}
-        {practicePlan && (
-          <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg text-white">📋 Your Practice Plan</h2>
-              <span className="text-slate-400 text-sm">{availableTime} min session</span>
-            </div>
-            
-            <div className="bg-slate-900 rounded-lg p-6 border border-slate-600">
-              {formatPlan(practicePlan)}
+      {/* Features Section */}
+      <section className="py-20 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-[#E8E3DC] mb-4">
+              Everything You Need to Coach
+              <span className="text-[#E65722]"> Champions</span>
+            </h2>
+            <p className="text-lg text-[#5F9EA0] max-w-2xl mx-auto">
+              Built for serious coaches who demand excellence
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Feature 1 */}
+            <div className="rounded-2xl p-8 bg-[#002D40] border border-[#D6C8B4]/10 hover:border-[#E65722]/30 transition-all group">
+              <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-[#E65722]/15 mb-6 group-hover:bg-[#E65722]/25 transition-colors">
+                <Mic className="w-7 h-7 text-[#E65722]" />
+              </div>
+              <h3 className="text-xl font-bold text-[#E8E3DC] mb-3">AI Lesson Transcription</h3>
+              <p className="text-[#5F9EA0]">
+                Record lessons and let AI transcribe and summarize key points automatically. 
+                Never miss an important coaching moment.
+              </p>
             </div>
 
-            <div className="mt-4 flex gap-3">
-              <button
-                onClick={generatePlan}
-                disabled={loading}
-                className="flex-1 bg-slate-700 hover:bg-slate-600 text-white py-2 rounded-lg font-medium"
-              >
-                🔄 Generate New Plan
-              </button>
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(practicePlan)
-                  alert('Practice plan copied to clipboard!')
-                }}
-                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg font-medium"
-              >
-                📋 Copy to Clipboard
-              </button>
+            {/* Feature 2 */}
+            <div className="rounded-2xl p-8 bg-[#002D40] border border-[#D6C8B4]/10 hover:border-[#E65722]/30 transition-all group">
+              <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-[#E65722]/15 mb-6 group-hover:bg-[#E65722]/25 transition-colors">
+                <BarChart3 className="w-7 h-7 text-[#E65722]" />
+              </div>
+              <h3 className="text-xl font-bold text-[#E8E3DC] mb-3">Strokes Gained Analytics</h3>
+              <p className="text-[#5F9EA0]">
+                Track performance with PGA Tour-level strokes gained metrics. 
+                Identify weaknesses and measure improvement over time.
+              </p>
+            </div>
+
+            {/* Feature 3 */}
+            <div className="rounded-2xl p-8 bg-[#002D40] border border-[#D6C8B4]/10 hover:border-[#E65722]/30 transition-all group">
+              <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-[#E65722]/15 mb-6 group-hover:bg-[#E65722]/25 transition-colors">
+                <Target className="w-7 h-7 text-[#E65722]" />
+              </div>
+              <h3 className="text-xl font-bold text-[#E8E3DC] mb-3">Visual Shot Tracking</h3>
+              <p className="text-[#5F9EA0]">
+                Plot shots on satellite imagery for detailed analysis. 
+                Visualize patterns and optimize course strategy.
+              </p>
+            </div>
+
+            {/* Feature 4 */}
+            <div className="rounded-2xl p-8 bg-[#002D40] border border-[#D6C8B4]/10 hover:border-[#E65722]/30 transition-all group">
+              <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-[#E65722]/15 mb-6 group-hover:bg-[#E65722]/25 transition-colors">
+                <Users className="w-7 h-7 text-[#E65722]" />
+              </div>
+              <h3 className="text-xl font-bold text-[#E8E3DC] mb-3">Student Management</h3>
+              <p className="text-[#5F9EA0]">
+                Organize your roster, track progress, and maintain detailed records 
+                for each student in one central location.
+              </p>
+            </div>
+
+            {/* Feature 5 */}
+            <div className="rounded-2xl p-8 bg-[#002D40] border border-[#D6C8B4]/10 hover:border-[#E65722]/30 transition-all group">
+              <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-[#E65722]/15 mb-6 group-hover:bg-[#E65722]/25 transition-colors">
+                <Calendar className="w-7 h-7 text-[#E65722]" />
+              </div>
+              <h3 className="text-xl font-bold text-[#E8E3DC] mb-3">Booking & Payments</h3>
+              <p className="text-[#5F9EA0]">
+                Integrated scheduling and Stripe payments. Students book and pay online, 
+                you focus on coaching.
+              </p>
+            </div>
+
+            {/* Feature 6 */}
+            <div className="rounded-2xl p-8 bg-[#002D40] border border-[#D6C8B4]/10 hover:border-[#E65722]/30 transition-all group">
+              <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-[#E65722]/15 mb-6 group-hover:bg-[#E65722]/25 transition-colors">
+                <Video className="w-7 h-7 text-[#E65722]" />
+              </div>
+              <h3 className="text-xl font-bold text-[#E8E3DC] mb-3">Media Library</h3>
+              <p className="text-[#5F9EA0]">
+                Store and organize swing videos, photos, and audio recordings. 
+                Students access their media through their portal.
+              </p>
             </div>
           </div>
-        )}
+        </div>
+      </section>
 
-        {/* Tips */}
-        {!practicePlan && !loading && (
-          <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
-            <h2 className="text-lg text-white mb-4">💡 How It Works</h2>
-            <div className="space-y-3 text-slate-300">
-              <p>• The AI analyzes your round statistics to identify areas for improvement</p>
-              <p>• It considers your recent lesson notes from your coach</p>
-              <p>• Practice plans are customized to fit your available time</p>
-              <p>• Each drill includes specific instructions and goals</p>
-              <p>• Add more rounds in <Link href="/student-portal/stats" className="text-emerald-400 underline">My Stats</Link> for better personalization!</p>
-            </div>
+      {/* Social Proof */}
+      <section className="py-20 px-6 bg-[#002D40]">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-center gap-2 mb-8">
+            {[1,2,3,4,5].map(i => (
+              <Star key={i} className="w-6 h-6 fill-[#E65722] text-[#E65722]" />
+            ))}
           </div>
-        )}
-      </main>
+          <blockquote className="text-2xl md:text-3xl font-medium text-[#E8E3DC] text-center max-w-4xl mx-auto mb-8">
+            &ldquo;This platform has transformed how I coach. The strokes gained analytics 
+            alone have helped my students drop an average of 3 strokes in just two months.&rdquo;
+          </blockquote>
+          <div className="text-center">
+            <p className="text-[#E65722] font-semibold">Mike Richardson</p>
+            <p className="text-[#5F9EA0]">PGA Professional, Pebble Beach Golf Academy</p>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-20 px-6">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-3xl md:text-4xl font-bold text-[#E8E3DC] mb-4">
+            Ready to Elevate Your Coaching?
+          </h2>
+          <p className="text-lg text-[#5F9EA0] mb-8">
+            Join elite coaches who are transforming their practice with AI-powered tools.
+          </p>
+          <Link
+            href="/sign-up"
+            className="inline-flex items-center gap-2 px-10 py-5 rounded-xl text-xl font-semibold transition-all bg-[#E65722] text-white hover:bg-[#E65722]/90 shadow-lg shadow-[#E65722]/25"
+          >
+            Get Started Free
+            <ChevronRight className="w-6 h-6" />
+          </Link>
+          <p className="text-sm text-[#5F9EA0] mt-4">No credit card required</p>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-[#D6C8B4]/10 py-12 px-6 bg-[#002D40]">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center font-serif text-xl font-bold italic bg-[#E65722] text-white">
+                G
+              </div>
+              <div>
+                <p className="font-bold text-white">Golf Coach</p>
+                <p className="text-xs text-[#5F9EA0]">Performance Lab</p>
+              </div>
+            </div>
+            <p className="text-[#5F9EA0] text-sm">
+              © 2024 Golf Coach AI. Built for champions.
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }

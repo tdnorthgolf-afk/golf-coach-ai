@@ -105,8 +105,8 @@ export default function BookingCalendar({
   const selectedLessonType = lessonTypes.find(lt => lt.id === formData.lessonTypeId)
 
   // Group bookings by date
-  const groupedBookings: { [date: string]: Booking[] } = {}
-  bookings.forEach(booking => {
+const groupedBookings: { [date: string]: Booking[] } = {}
+;(bookings || []).forEach(booking => {
     const date = booking.booking_date
     if (!groupedBookings[date]) groupedBookings[date] = []
     groupedBookings[date].push(booking)

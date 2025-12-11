@@ -2,6 +2,7 @@
 
 import { useClerk } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
+import { LogOut } from 'lucide-react'
 
 export default function SignOutButton() {
   const { signOut } = useClerk()
@@ -15,9 +16,13 @@ export default function SignOutButton() {
   return (
     <button
       onClick={handleSignOut}
-      className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg font-medium"
+      className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all"
+      style={{ color: '#D94F3A' }}
+      onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(217, 79, 58, 0.1)'}
+      onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
     >
-      🚪 Sign Out
+      <LogOut className="w-4 h-4" />
+      <span className="hidden sm:inline">Sign Out</span>
     </button>
   )
 }

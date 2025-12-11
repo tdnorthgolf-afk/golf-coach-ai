@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { ArrowLeft, Flag, Check } from 'lucide-react'
 
 type HoleData = {
   number: number
@@ -11,18 +12,6 @@ type HoleData = {
   putts: number
   fairwayHit: boolean | null
   greenInRegulation: boolean
-  shots: ShotData[]
-}
-
-type ShotData = {
-  shotNumber: number
-  category: 'tee' | 'approach' | 'around_green' | 'putt'
-  startLie: string
-  endLie: string
-  startDistance: number
-  endDistance: number
-  club: string
-  result: string
 }
 
 const defaultHoles: HoleData[] = Array.from({ length: 18 }, (_, i) => ({
@@ -32,7 +21,6 @@ const defaultHoles: HoleData[] = Array.from({ length: 18 }, (_, i) => ({
   putts: 2,
   fairwayHit: null,
   greenInRegulation: false,
-  shots: [],
 }))
 
 export default function AddRoundPage() {
@@ -81,11 +69,8 @@ export default function AddRoundPage() {
         }),
       })
 
-      if (!response.ok) {
-        throw new Error('Failed to save round')
-      }
+      if (!response.ok) throw new Error('Failed to save round')
 
-      alert('Round saved successfully!')
       router.push('/student-portal/stats')
     } catch (error) {
       console.error('Error:', error)
@@ -102,39 +87,42 @@ export default function AddRoundPage() {
   // Step 1: Round Info
   if (step === 'info') {
     return (
-      <div className="min-h-screen bg-slate-900">
-        <header className="border-b border-slate-700 bg-slate-800 p-4">
-          <div className="max-w-2xl mx-auto flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-emerald-400">+ Add Round</h1>
-            <Link href="/student-portal/stats" className="text-slate-400 hover:text-white">
-              ✕ Cancel
-            </Link>
+      <div className="min-h-screen bg-[#0A1A20]">
+        <header className="border-b border-[#D6C8B4]/10 bg-[#002D40] sticky top-0 z-50">
+          <div className="max-w-2xl mx-auto px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Link href="/student-portal/stats" className="text-[#5F9EA0] hover:text-[#E8E3DC]">
+                <ArrowLeft className="w-5 h-5" />
+              </Link>
+              <h1 className="text-lg font-bold text-white">Add Round</h1>
+            </div>
+            <span className="text-sm text-[#5F9EA0]">Step 1 of 3</span>
           </div>
         </header>
 
-        <main className="p-8 max-w-2xl mx-auto">
-          <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
-            <h2 className="text-lg text-white mb-4">Round Information</h2>
+        <main className="max-w-2xl mx-auto px-6 py-8">
+          <div className="rounded-xl p-6 bg-[#002D40]">
+            <h2 className="text-lg font-semibold text-[#E8E3DC] mb-6">Round Information</h2>
             
             <div className="space-y-4">
               <div>
-                <label className="block text-slate-400 text-sm mb-2">Course Name *</label>
+                <label className="block text-sm font-medium mb-2 text-[#5F9EA0]">Course Name *</label>
                 <input
                   type="text"
                   value={courseName}
                   onChange={(e) => setCourseName(e.target.value)}
                   placeholder="Enter course name"
-                  className="w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-4 py-3"
+                  className="w-full px-4 py-3 rounded-xl border border-[#D6C8B4]/20 bg-[#0A1A20] text-[#E8E3DC] placeholder-[#5F9EA0] focus:outline-none focus:border-[#E65722] transition-colors"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-slate-400 text-sm mb-2">Tee Color</label>
+                  <label className="block text-sm font-medium mb-2 text-[#5F9EA0]">Tee Color</label>
                   <select
                     value={teeColor}
                     onChange={(e) => setTeeColor(e.target.value)}
-                    className="w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-4 py-3"
+                    className="w-full px-4 py-3 rounded-xl border border-[#D6C8B4]/20 bg-[#0A1A20] text-[#E8E3DC] focus:outline-none focus:border-[#E65722] transition-colors"
                   >
                     <option value="black">Black</option>
                     <option value="blue">Blue</option>
@@ -144,12 +132,12 @@ export default function AddRoundPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-slate-400 text-sm mb-2">Date</label>
+                  <label className="block text-sm font-medium mb-2 text-[#5F9EA0]">Date</label>
                   <input
                     type="date"
                     value={roundDate}
                     onChange={(e) => setRoundDate(e.target.value)}
-                    className="w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-4 py-3"
+                    className="w-full px-4 py-3 rounded-xl border border-[#D6C8B4]/20 bg-[#0A1A20] text-[#E8E3DC] focus:outline-none focus:border-[#E65722] transition-colors"
                   />
                 </div>
               </div>
@@ -157,7 +145,7 @@ export default function AddRoundPage() {
               <button
                 onClick={() => courseName && setStep('holes')}
                 disabled={!courseName}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-600 text-white py-3 rounded-lg font-medium mt-4"
+                className="w-full py-4 rounded-xl font-semibold transition-all bg-[#E65722] text-white hover:bg-[#E65722]/90 disabled:opacity-50 disabled:cursor-not-allowed mt-6"
               >
                 Continue to Scorecard →
               </button>
@@ -171,13 +159,21 @@ export default function AddRoundPage() {
   // Step 2: Hole-by-hole entry
   if (step === 'holes') {
     return (
-      <div className="min-h-screen bg-slate-900">
-        <header className="border-b border-slate-700 bg-slate-800 p-4">
-          <div className="max-w-4xl mx-auto">
-            <div className="flex items-center justify-between mb-2">
-              <h1 className="text-xl font-bold text-emerald-400">{courseName}</h1>
-              <div className="text-white">
-                <span className="text-slate-400">Score:</span> {totalScore} ({totalScore - totalPar >= 0 ? '+' : ''}{totalScore - totalPar})
+      <div className="min-h-screen bg-[#0A1A20]">
+        <header className="border-b border-[#D6C8B4]/10 bg-[#002D40] sticky top-0 z-50">
+          <div className="max-w-4xl mx-auto px-6 py-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-4">
+                <button onClick={() => setStep('info')} className="text-[#5F9EA0] hover:text-[#E8E3DC]">
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+                <h1 className="text-lg font-bold text-white">{courseName}</h1>
+              </div>
+              <div className="text-right">
+                <p className="text-2xl font-bold text-white">{totalScore}</p>
+                <p className="text-sm text-[#5F9EA0]">
+                  {totalScore - totalPar >= 0 ? '+' : ''}{totalScore - totalPar}
+                </p>
               </div>
             </div>
             
@@ -187,12 +183,12 @@ export default function AddRoundPage() {
                 <button
                   key={hole.number}
                   onClick={() => setCurrentHole(hole.number)}
-                  className={`w-8 h-8 rounded-full text-sm font-medium flex-shrink-0 ${
+                  className={`w-8 h-8 rounded-full text-sm font-medium flex-shrink-0 transition-all ${
                     currentHole === hole.number 
-                      ? 'bg-emerald-600 text-white' 
+                      ? 'bg-[#E65722] text-white' 
                       : hole.score > 0 
-                        ? 'bg-slate-600 text-white'
-                        : 'bg-slate-700 text-slate-400'
+                        ? 'bg-[#D6C8B4] text-[#0B2D38]'
+                        : 'bg-[#0A1A20] text-[#5F9EA0] border border-[#D6C8B4]/20'
                   }`}
                 >
                   {hole.number}
@@ -202,68 +198,67 @@ export default function AddRoundPage() {
           </div>
         </header>
 
-        <main className="p-4 max-w-4xl mx-auto">
-          {/* Current Hole Entry */}
-          <div className="bg-slate-800 rounded-lg p-6 border border-slate-700 mb-4">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl text-white">Hole {currentHole}</h2>
-              <div className="flex items-center gap-4">
-                <div>
-                  <label className="block text-slate-400 text-xs mb-1">Par</label>
-                  <div className="flex gap-1">
-                    {[3, 4, 5].map(p => (
-                      <button
-                        key={p}
-                        onClick={() => updateHole(currentHole, { par: p })}
-                        className={`w-10 h-10 rounded-lg font-medium ${
-                          currentHoleData.par === p 
-                            ? 'bg-emerald-600 text-white' 
-                            : 'bg-slate-700 text-slate-300'
-                        }`}
-                      >
-                        {p}
-                      </button>
-                    ))}
-                  </div>
+        <main className="max-w-4xl mx-auto px-6 py-6">
+          <div className="rounded-xl p-6 bg-[#002D40] mb-4">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-white">Hole {currentHole}</h2>
+              <div>
+                <p className="text-xs text-[#5F9EA0] mb-1">Par</p>
+                <div className="flex gap-1">
+                  {[3, 4, 5].map(p => (
+                    <button
+                      key={p}
+                      onClick={() => updateHole(currentHole, { par: p })}
+                      className={`w-10 h-10 rounded-lg font-bold transition-all ${
+                        currentHoleData.par === p 
+                          ? 'bg-[#E65722] text-white' 
+                          : 'bg-[#0A1A20] text-[#E8E3DC] border border-[#D6C8B4]/20 hover:border-[#E65722]'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
 
             {/* Score */}
-            <div className="mb-4">
-              <label className="block text-slate-400 text-sm mb-2">Score</label>
+            <div className="mb-6">
+              <p className="text-sm font-medium text-[#5F9EA0] mb-3">Score</p>
               <div className="flex gap-2 flex-wrap">
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(s => (
-                  <button
-                    key={s}
-                    onClick={() => updateHole(currentHole, { score: s })}
-                    className={`w-12 h-12 rounded-lg font-bold text-lg ${
-                      currentHoleData.score === s 
-                        ? s < currentHoleData.par ? 'bg-red-500 text-white'
-                          : s === currentHoleData.par ? 'bg-emerald-600 text-white'
-                          : s === currentHoleData.par + 1 ? 'bg-blue-600 text-white'
-                          : 'bg-yellow-600 text-white'
-                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                    }`}
-                  >
-                    {s}
-                  </button>
-                ))}
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(s => {
+                  let bgColor = 'bg-[#0A1A20] border border-[#D6C8B4]/20'
+                  if (currentHoleData.score === s) {
+                    if (s < currentHoleData.par) bgColor = 'bg-[#E65722]'
+                    else if (s === currentHoleData.par) bgColor = 'bg-[#5F9EA0]'
+                    else if (s === currentHoleData.par + 1) bgColor = 'bg-[#002D40] border-2 border-[#D6C8B4]'
+                    else bgColor = 'bg-[#D94F3A]'
+                  }
+                  return (
+                    <button
+                      key={s}
+                      onClick={() => updateHole(currentHole, { score: s })}
+                      className={`w-12 h-12 rounded-xl font-bold text-lg transition-all ${bgColor} ${currentHoleData.score === s ? 'text-white' : 'text-[#E8E3DC] hover:border-[#E65722]'}`}
+                    >
+                      {s}
+                    </button>
+                  )
+                })}
               </div>
             </div>
 
             {/* Putts */}
-            <div className="mb-4">
-              <label className="block text-slate-400 text-sm mb-2">Putts</label>
+            <div className="mb-6">
+              <p className="text-sm font-medium text-[#5F9EA0] mb-3">Putts</p>
               <div className="flex gap-2">
                 {[0, 1, 2, 3, 4, 5].map(p => (
                   <button
                     key={p}
                     onClick={() => updateHole(currentHole, { putts: p })}
-                    className={`w-12 h-12 rounded-lg font-bold text-lg ${
+                    className={`w-12 h-12 rounded-xl font-bold text-lg transition-all ${
                       currentHoleData.putts === p 
-                        ? 'bg-emerald-600 text-white' 
-                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                        ? 'bg-[#E65722] text-white' 
+                        : 'bg-[#0A1A20] text-[#E8E3DC] border border-[#D6C8B4]/20 hover:border-[#E65722]'
                     }`}
                   >
                     {p}
@@ -272,58 +267,58 @@ export default function AddRoundPage() {
               </div>
             </div>
 
-            {/* Fairway Hit (only for par 4 and 5) */}
+            {/* Fairway (par 4/5 only) */}
             {currentHoleData.par > 3 && (
-              <div className="mb-4">
-                <label className="block text-slate-400 text-sm mb-2">Fairway</label>
+              <div className="mb-6">
+                <p className="text-sm font-medium text-[#5F9EA0] mb-3">Fairway</p>
                 <div className="flex gap-2">
                   <button
                     onClick={() => updateHole(currentHole, { fairwayHit: true })}
-                    className={`px-6 py-3 rounded-lg font-medium ${
+                    className={`flex-1 py-3 rounded-xl font-medium transition-all flex items-center justify-center gap-2 ${
                       currentHoleData.fairwayHit === true 
-                        ? 'bg-emerald-600 text-white' 
-                        : 'bg-slate-700 text-slate-300'
+                        ? 'bg-[#E65722] text-white' 
+                        : 'bg-[#0A1A20] text-[#E8E3DC] border border-[#D6C8B4]/20 hover:border-[#E65722]'
                     }`}
                   >
-                    ✓ Hit
+                    <Check className="w-4 h-4" /> Hit
                   </button>
                   <button
                     onClick={() => updateHole(currentHole, { fairwayHit: false })}
-                    className={`px-6 py-3 rounded-lg font-medium ${
+                    className={`flex-1 py-3 rounded-xl font-medium transition-all ${
                       currentHoleData.fairwayHit === false 
-                        ? 'bg-red-600 text-white' 
-                        : 'bg-slate-700 text-slate-300'
+                        ? 'bg-[#D94F3A] text-white' 
+                        : 'bg-[#0A1A20] text-[#E8E3DC] border border-[#D6C8B4]/20 hover:border-[#E65722]'
                     }`}
                   >
-                    ✗ Missed
+                    Missed
                   </button>
                 </div>
               </div>
             )}
 
             {/* GIR */}
-            <div className="mb-4">
-              <label className="block text-slate-400 text-sm mb-2">Green in Regulation</label>
+            <div className="mb-6">
+              <p className="text-sm font-medium text-[#5F9EA0] mb-3">Green in Regulation</p>
               <div className="flex gap-2">
                 <button
                   onClick={() => updateHole(currentHole, { greenInRegulation: true })}
-                  className={`px-6 py-3 rounded-lg font-medium ${
+                  className={`flex-1 py-3 rounded-xl font-medium transition-all flex items-center justify-center gap-2 ${
                     currentHoleData.greenInRegulation 
-                      ? 'bg-emerald-600 text-white' 
-                      : 'bg-slate-700 text-slate-300'
+                      ? 'bg-[#E65722] text-white' 
+                      : 'bg-[#0A1A20] text-[#E8E3DC] border border-[#D6C8B4]/20 hover:border-[#E65722]'
                   }`}
                 >
-                  ✓ Yes
+                  <Check className="w-4 h-4" /> Yes
                 </button>
                 <button
                   onClick={() => updateHole(currentHole, { greenInRegulation: false })}
-                  className={`px-6 py-3 rounded-lg font-medium ${
+                  className={`flex-1 py-3 rounded-xl font-medium transition-all ${
                     !currentHoleData.greenInRegulation 
-                      ? 'bg-red-600 text-white' 
-                      : 'bg-slate-700 text-slate-300'
+                      ? 'bg-[#D94F3A] text-white' 
+                      : 'bg-[#0A1A20] text-[#E8E3DC] border border-[#D6C8B4]/20 hover:border-[#E65722]'
                   }`}
                 >
-                  ✗ No
+                  No
                 </button>
               </div>
             </div>
@@ -334,22 +329,22 @@ export default function AddRoundPage() {
             {currentHole > 1 && (
               <button
                 onClick={() => setCurrentHole(currentHole - 1)}
-                className="flex-1 bg-slate-700 hover:bg-slate-600 text-white py-3 rounded-lg font-medium"
+                className="flex-1 py-4 rounded-xl font-medium bg-[#002D40] text-[#E8E3DC] border border-[#D6C8B4]/20 hover:border-[#E65722] transition-all"
               >
-                ← Previous Hole
+                ← Previous
               </button>
             )}
             {currentHole < 18 ? (
               <button
                 onClick={() => setCurrentHole(currentHole + 1)}
-                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-lg font-medium"
+                className="flex-1 py-4 rounded-xl font-semibold bg-[#E65722] text-white hover:bg-[#E65722]/90 transition-all"
               >
-                Next Hole →
+                Next →
               </button>
             ) : (
               <button
                 onClick={() => setStep('review')}
-                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-lg font-medium"
+                className="flex-1 py-4 rounded-xl font-semibold bg-[#E65722] text-white hover:bg-[#E65722]/90 transition-all"
               >
                 Review Round →
               </button>
@@ -362,79 +357,78 @@ export default function AddRoundPage() {
 
   // Step 3: Review
   return (
-    <div className="min-h-screen bg-slate-900">
-      <header className="border-b border-slate-700 bg-slate-800 p-4">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-emerald-400">Review Round</h1>
-          <button 
-            onClick={() => setStep('holes')}
-            className="text-slate-400 hover:text-white"
-          >
-            ← Edit
-          </button>
+    <div className="min-h-screen bg-[#0A1A20]">
+      <header className="border-b border-[#D6C8B4]/10 bg-[#002D40] sticky top-0 z-50">
+        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button onClick={() => setStep('holes')} className="text-[#5F9EA0] hover:text-[#E8E3DC]">
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <h1 className="text-lg font-bold text-white">Review Round</h1>
+          </div>
+          <span className="text-sm text-[#5F9EA0]">Step 3 of 3</span>
         </div>
       </header>
 
-      <main className="p-8 max-w-4xl mx-auto">
-        {/* Summary */}
-        <div className="bg-slate-800 rounded-lg p-6 border border-slate-700 mb-6">
-          <h2 className="text-lg text-white mb-4">{courseName}</h2>
+      <main className="max-w-4xl mx-auto px-6 py-8">
+        {/* Summary Card */}
+        <div className="rounded-xl p-6 bg-[#D6C8B4] mb-6">
+          <h2 className="text-lg font-bold text-[#0B2D38] mb-4">{courseName}</h2>
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
-              <p className="text-slate-400 text-sm">Score</p>
-              <p className="text-3xl font-bold text-white">{totalScore}</p>
-              <p className="text-slate-400 text-sm">
+              <p className="text-4xl font-bold text-[#0B2D38]">{totalScore}</p>
+              <p className="text-sm text-[#5F9EA0]">
                 ({totalScore - totalPar >= 0 ? '+' : ''}{totalScore - totalPar})
               </p>
             </div>
             <div>
-              <p className="text-slate-400 text-sm">Putts</p>
-              <p className="text-3xl font-bold text-white">{totalPutts}</p>
+              <p className="text-4xl font-bold text-[#0B2D38]">{totalPutts}</p>
+              <p className="text-sm text-[#5F9EA0]">Putts</p>
             </div>
             <div>
-              <p className="text-slate-400 text-sm">FIR / GIR</p>
-              <p className="text-3xl font-bold text-white">
-                {holes.filter(h => h.fairwayHit).length}/{holes.filter(h => h.par > 3).length}
-                {' / '}
+              <p className="text-4xl font-bold text-[#0B2D38]">
                 {holes.filter(h => h.greenInRegulation).length}/18
               </p>
+              <p className="text-sm text-[#5F9EA0]">GIR</p>
             </div>
           </div>
         </div>
 
         {/* Scorecard */}
-        <div className="bg-slate-800 rounded-lg p-6 border border-slate-700 mb-6 overflow-x-auto">
-          <h2 className="text-lg text-white mb-4">Scorecard</h2>
-          <table className="w-full text-sm">
+        <div className="rounded-xl p-6 bg-[#002D40] mb-6 overflow-x-auto">
+          <h3 className="text-lg font-semibold text-[#E8E3DC] mb-4">Scorecard</h3>
+          
+          {/* Front 9 */}
+          <table className="w-full text-sm mb-4">
             <thead>
-              <tr className="text-slate-400">
-                <th className="px-2 py-1">Hole</th>
+              <tr className="text-[#5F9EA0]">
+                <th className="px-2 py-1 text-left">Hole</th>
                 {holes.slice(0, 9).map(h => (
-                  <th key={h.number} className="px-2 py-1">{h.number}</th>
+                  <th key={h.number} className="px-2 py-1 w-8">{h.number}</th>
                 ))}
-                <th className="px-2 py-1 bg-slate-700">Out</th>
+                <th className="px-2 py-1 bg-[#0A1A20] rounded">Out</th>
               </tr>
             </thead>
             <tbody>
-              <tr className="text-slate-300">
-                <td className="px-2 py-1">Par</td>
+              <tr className="text-[#E8E3DC]">
+                <td className="px-2 py-1 text-[#5F9EA0]">Par</td>
                 {holes.slice(0, 9).map(h => (
                   <td key={h.number} className="px-2 py-1 text-center">{h.par}</td>
                 ))}
-                <td className="px-2 py-1 text-center bg-slate-700">
+                <td className="px-2 py-1 text-center bg-[#0A1A20] rounded font-bold">
                   {holes.slice(0, 9).reduce((s, h) => s + h.par, 0)}
                 </td>
               </tr>
-              <tr className="text-white font-medium">
-                <td className="px-2 py-1">Score</td>
+              <tr className="text-white font-bold">
+                <td className="px-2 py-1 text-[#5F9EA0] font-normal">Score</td>
                 {holes.slice(0, 9).map(h => (
                   <td key={h.number} className={`px-2 py-1 text-center ${
-                    h.score < h.par ? 'text-red-400' :
-                    h.score === h.par ? 'text-emerald-400' :
-                    h.score === h.par + 1 ? 'text-blue-400' : 'text-yellow-400'
+                    h.score < h.par ? 'text-[#E65722]' :
+                    h.score === h.par ? 'text-[#5F9EA0]' :
+                    h.score === h.par + 1 ? 'text-[#87CEEB]' : 'text-[#D94F3A]'
                   }`}>{h.score}</td>
                 ))}
-                <td className="px-2 py-1 text-center bg-slate-700">
+                <td className="px-2 py-1 text-center bg-[#0A1A20] rounded">
                   {holes.slice(0, 9).reduce((s, h) => s + h.score, 0)}
                 </td>
               </tr>
@@ -442,41 +436,41 @@ export default function AddRoundPage() {
           </table>
 
           {/* Back 9 */}
-          <table className="w-full text-sm mt-4">
+          <table className="w-full text-sm">
             <thead>
-              <tr className="text-slate-400">
-                <th className="px-2 py-1">Hole</th>
+              <tr className="text-[#5F9EA0]">
+                <th className="px-2 py-1 text-left">Hole</th>
                 {holes.slice(9, 18).map(h => (
-                  <th key={h.number} className="px-2 py-1">{h.number}</th>
+                  <th key={h.number} className="px-2 py-1 w-8">{h.number}</th>
                 ))}
-                <th className="px-2 py-1 bg-slate-700">In</th>
-                <th className="px-2 py-1 bg-emerald-700">Tot</th>
+                <th className="px-2 py-1 bg-[#0A1A20] rounded">In</th>
+                <th className="px-2 py-1 bg-[#E65722] rounded text-white">Tot</th>
               </tr>
             </thead>
             <tbody>
-              <tr className="text-slate-300">
-                <td className="px-2 py-1">Par</td>
+              <tr className="text-[#E8E3DC]">
+                <td className="px-2 py-1 text-[#5F9EA0]">Par</td>
                 {holes.slice(9, 18).map(h => (
                   <td key={h.number} className="px-2 py-1 text-center">{h.par}</td>
                 ))}
-                <td className="px-2 py-1 text-center bg-slate-700">
+                <td className="px-2 py-1 text-center bg-[#0A1A20] rounded font-bold">
                   {holes.slice(9, 18).reduce((s, h) => s + h.par, 0)}
                 </td>
-                <td className="px-2 py-1 text-center bg-emerald-700">{totalPar}</td>
+                <td className="px-2 py-1 text-center bg-[#E65722] rounded font-bold text-white">{totalPar}</td>
               </tr>
-              <tr className="text-white font-medium">
-                <td className="px-2 py-1">Score</td>
+              <tr className="text-white font-bold">
+                <td className="px-2 py-1 text-[#5F9EA0] font-normal">Score</td>
                 {holes.slice(9, 18).map(h => (
                   <td key={h.number} className={`px-2 py-1 text-center ${
-                    h.score < h.par ? 'text-red-400' :
-                    h.score === h.par ? 'text-emerald-400' :
-                    h.score === h.par + 1 ? 'text-blue-400' : 'text-yellow-400'
+                    h.score < h.par ? 'text-[#E65722]' :
+                    h.score === h.par ? 'text-[#5F9EA0]' :
+                    h.score === h.par + 1 ? 'text-[#87CEEB]' : 'text-[#D94F3A]'
                   }`}>{h.score}</td>
                 ))}
-                <td className="px-2 py-1 text-center bg-slate-700">
+                <td className="px-2 py-1 text-center bg-[#0A1A20] rounded">
                   {holes.slice(9, 18).reduce((s, h) => s + h.score, 0)}
                 </td>
-                <td className="px-2 py-1 text-center bg-emerald-700 font-bold">{totalScore}</td>
+                <td className="px-2 py-1 text-center bg-[#E65722] rounded text-white">{totalScore}</td>
               </tr>
             </tbody>
           </table>
@@ -486,9 +480,14 @@ export default function AddRoundPage() {
         <button
           onClick={handleSubmit}
           disabled={saving}
-          className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-600 text-white py-4 rounded-lg font-semibold text-lg"
+          className="w-full py-4 rounded-xl font-semibold text-lg transition-all bg-[#E65722] text-white hover:bg-[#E65722]/90 disabled:opacity-50 flex items-center justify-center gap-2"
         >
-          {saving ? 'Saving...' : 'Save Round'}
+          {saving ? 'Saving...' : (
+            <>
+              <Flag className="w-5 h-5" />
+              Save Round
+            </>
+          )}
         </button>
       </main>
     </div>

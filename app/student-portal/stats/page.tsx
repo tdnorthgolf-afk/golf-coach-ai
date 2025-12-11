@@ -110,12 +110,20 @@ export default function StatsPage() {
             <p className="text-slate-400">Strokes Gained Analysis</p>
           </div>
           <div className="flex items-center gap-3">
-            <Link 
-              href="/student-portal/stats/add-round" 
-              className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-medium"
-            >
-              + Add Round
-            </Link>
+            <div className="flex gap-2">
+  <Link 
+    href="/student-portal/stats/add-round" 
+    className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-medium"
+  >
+    + Add Round
+  </Link>
+  <Link 
+    href="/student-portal/stats/shot-tracker" 
+    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium"
+  >
+    🎯 Shot Tracker
+  </Link>
+</div>
             <Link 
               href="/student-portal/dashboard" 
               className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg font-medium"
