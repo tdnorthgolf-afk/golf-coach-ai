@@ -1,480 +1,310 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
-import {
-  ShotData,
-  LieType,
-  calculateStrokesGained,
-  calculateDistance,
-  calibrateScale,
-  formatStrokesGained,
-  getStrokesGainedColor,
-  CATEGORY_NAMES,
-  CATEGORY_COLORS,
-  ShotCategory
-} from '@/lib/strokes-gained'
+import { useState, useRef } from 'react'
+import { Target, RotateCcw, Flag, Circle } from 'lucide-react'
+import { calculateStrokesGained, ShotData, StrokesGainedSummary, LieType, formatStrokesGained, getStrokesGainedColor } from '@/lib/strokes-gained'
 
 interface ShotTrackerProps {
   imageUrl: string
-  holeNumber: number
+  holeYardage: number
   par: number
-  yardage: number
-  teePosition?: { x: number; y: number }
-  pinPosition?: { x: number; y: number }
-  onSave?: (shots: ShotData[], summary: any) => void
+  onSave?: (shots: ShotData[], summary: StrokesGainedSummary) => void
 }
 
-type PlacementMode = 'tee' | 'pin' | 'shot_start' | 'shot_end' | null
+type PlacementMode = 'tee' | 'pin' | 'shot_start' | 'shot_end'
 
-const CLUBS = [
-  'Driver', '3 Wood', '5 Wood',
-  '3 Hybrid', '4 Hybrid', '5 Hybrid',
-  '4 Iron', '5 Iron', '6 Iron', '7 Iron', '8 Iron', '9 Iron',
-  'PW', 'GW', 'SW', 'LW',
-  'Putter'
-]
+interface Position {
+  x: number
+  y: number
+}
 
-const LIE_OPTIONS: { value: LieType; label: string }[] = [
-  { value: 'tee', label: 'Tee' },
-  { value: 'fairway', label: 'Fairway' },
-  { value: 'rough', label: 'Rough' },
-  { value: 'bunker', label: 'Bunker' },
-  { value: 'green', label: 'Green' },
-  { value: 'fringe', label: 'Fringe' },
-  { value: 'recovery', label: 'Recovery' },
-]
-
-export default function ShotTracker({
-  imageUrl,
-  holeNumber,
-  par,
-  yardage,
-  teePosition: initialTee,
-  pinPosition: initialPin,
-  onSave
-}: ShotTrackerProps) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [imageSize, setImageSize] = useState({ width: 0, height: 0 })
-  const [teePos, setTeePos] = useState(initialTee || null)
-  const [pinPos, setPinPos] = useState(initialPin || null)
+export default function ShotTracker({ imageUrl, holeYardage, par, onSave }: ShotTrackerProps) {
+  const [mode, setMode] = useState<PlacementMode>('tee')
+  const [teePosition, setTeePosition] = useState<Position | null>(null)
+  const [pinPosition, setPinPosition] = useState<Position | null>(null)
   const [shots, setShots] = useState<ShotData[]>([])
   const [currentShot, setCurrentShot] = useState<Partial<ShotData>>({})
-  const [placementMode, setPlacementMode] = useState<PlacementMode>(null)
-  const [pixelsPerYard, setPixelsPerYard] = useState<number | null>(null)
   const [selectedClub, setSelectedClub] = useState('Driver')
   const [selectedLie, setSelectedLie] = useState<LieType>('tee')
   const [isPenalty, setIsPenalty] = useState(false)
+  const imageRef = useRef<HTMLDivElement>(null)
 
-  // Calculate scale when tee and pin are set
-  useEffect(() => {
-    if (teePos && pinPos) {
-      const scale = calibrateScale(teePos, pinPos, yardage)
-      setPixelsPerYard(scale)
-    }
-  }, [teePos, pinPos, yardage])
+  const clubs = ['Driver', '3 Wood', '5 Wood', '4 Iron', '5 Iron', '6 Iron', '7 Iron', '8 Iron', '9 Iron', 'PW', 'GW', 'SW', 'LW', 'Putter']
+  const lies: LieType[] = ['tee', 'fairway', 'rough', 'bunker', 'green', 'fringe', 'recovery']
 
-  // Handle image load
-  const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    const img = e.currentTarget
-    setImageSize({ width: img.naturalWidth, height: img.naturalHeight })
+  const pixelsToYards = (pixels: number): number => {
+    if (!teePosition || !pinPosition) return 0
+    const teeToPin = Math.sqrt(
+      Math.pow(pinPosition.x - teePosition.x, 2) + Math.pow(pinPosition.y - teePosition.y, 2)
+    )
+    return (pixels / teeToPin) * holeYardage
   }
 
-  // Handle click on image
+  const getDistanceToPin = (pos: Position): number => {
+    if (!pinPosition) return 0
+    const pixels = Math.sqrt(
+      Math.pow(pinPosition.x - pos.x, 2) + Math.pow(pinPosition.y - pos.y, 2)
+    )
+    return pixelsToYards(pixels)
+  }
+
   const handleImageClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!placementMode) return
+    if (!imageRef.current) return
 
-    const rect = e.currentTarget.getBoundingClientRect()
-    const scaleX = imageSize.width / rect.width
-    const scaleY = imageSize.height / rect.height
-    
-    const x = (e.clientX - rect.left) * scaleX
-    const y = (e.clientY - rect.top) * scaleY
+    const rect = imageRef.current.getBoundingClientRect()
+    const x = ((e.clientX - rect.left) / rect.width) * 100
+    const y = ((e.clientY - rect.top) / rect.height) * 100
+    const pos = { x, y }
 
-    const position = { x: Math.round(x), y: Math.round(y) }
-
-    switch (placementMode) {
+    switch (mode) {
       case 'tee':
-        setTeePos(position)
-        setPlacementMode(null)
+        setTeePosition(pos)
+        setMode('pin')
         break
       case 'pin':
-        setPinPos(position)
-        setPlacementMode(null)
+        setPinPosition(pos)
+        setMode('shot_start')
         break
       case 'shot_start':
         setCurrentShot({
-          ...currentShot,
-          startPosition: position,
-          startLie: selectedLie
+          startPosition: pos,
+          startLie: selectedLie,
+          startDistanceYards: getDistanceToPin(pos),
+          club: selectedClub,
         })
-        setPlacementMode('shot_end')
+        setMode('shot_end')
         break
       case 'shot_end':
-        if (currentShot.startPosition && pinPos && pixelsPerYard) {
-          const startDist = calculateDistance(currentShot.startPosition, pinPos, pixelsPerYard)
-          const endDist = calculateDistance(position, pinPos, pixelsPerYard)
-          
-          const newShot: ShotData = {
-            shotNumber: shots.length + 1,
-            startPosition: currentShot.startPosition,
-            endPosition: position,
-            startLie: currentShot.startLie || 'fairway',
-            endLie: selectedLie,
-            startDistanceYards: Math.round(startDist * 10) / 10,
-            endDistanceYards: Math.round(endDist * 10) / 10,
-            club: selectedClub,
-            isPenalty,
-            penaltyStrokes: isPenalty ? 1 : 0
-          }
-          
-          setShots([...shots, newShot])
-setCurrentShot({})
-setIsPenalty(false)
-
-// Auto-prepare for next shot from where this one ended
-if (endDist > 0.5) {
-  // Not holed yet - prepare for next shot
-  setCurrentShot({
-    startPosition: position,
-    startLie: selectedLie
-  })
-  setPlacementMode('shot_end')
-  
-  // Update lie for next shot
-  if (selectedLie === 'green') {
-    setSelectedLie('green')
-    setSelectedClub('Putter')
-  } else if (endDist < 50) {
-    setSelectedLie('green')
-    setSelectedClub('Putter')
-  }
-} else {
-  // Holed! Stop tracking
-  setPlacementMode(null)
-  alert('🎉 Holed! Great shot!')
-}
-          
-          // Auto-set next lie based on end position
-          if (endDist < 1) {
-            // Holed!
-          } else if (selectedLie === 'green') {
-            setSelectedLie('green')
-          } else {
-            setSelectedLie('fairway')
-          }
+        const endDistance = getDistanceToPin(pos)
+        const newShot: ShotData = {
+          shotNumber: shots.length + 1,
+          startPosition: currentShot.startPosition!,
+          endPosition: pos,
+          startLie: currentShot.startLie as LieType,
+          endLie: endDistance < 1 ? 'green' : selectedLie,
+          startDistanceYards: currentShot.startDistanceYards!,
+          endDistanceYards: endDistance,
+          club: currentShot.club!,
+          isPenalty,
+          penaltyStrokes: isPenalty ? 1 : 0,
+        }
+        setShots([...shots, newShot])
+        setCurrentShot({})
+        setIsPenalty(false)
+        
+        if (endDistance < 1) {
+          // Holed out
+          setMode('shot_start')
+        } else {
+          setSelectedLie(endDistance < 5 ? 'green' : 'fairway')
+          setMode('shot_start')
         }
         break
     }
   }
 
-  // Remove last shot
-  const removeLastShot = () => {
-    setShots(shots.slice(0, -1))
-  }
-
-  // Clear all shots
-  const clearShots = () => {
+  const resetTracker = () => {
+    setTeePosition(null)
+    setPinPosition(null)
     setShots([])
     setCurrentShot({})
-    setPlacementMode(null)
+    setMode('tee')
+    setSelectedLie('tee')
   }
 
-  // Calculate strokes gained
   const summary = shots.length > 0 ? calculateStrokesGained(shots) : null
 
-  // Save handler
-  const handleSave = () => {
-    if (onSave && summary) {
-      onSave(shots, summary)
-    }
-  }
-
-  // Get marker style position
-  const getMarkerStyle = (pos: { x: number; y: number }) => {
-    if (!imageSize.width) return {}
-    return {
-      left: `${(pos.x / imageSize.width) * 100}%`,
-      top: `${(pos.y / imageSize.height) * 100}%`
-    }
-  }
-
   return (
-    <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
-      {/* Header */}
-      <div className="p-4 border-b border-slate-700 flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-bold text-white">Hole {holeNumber}</h2>
-          <p className="text-slate-400 text-sm">Par {par} • {yardage} yards</p>
+    <div className="space-y-6">
+      {/* Controls */}
+      <div className="flex flex-wrap items-center gap-4 p-4 rounded-xl bg-[#002D40]">
+        <div className="flex-1">
+          <p className="text-sm text-[#5F9EA0] mb-1">Current Step</p>
+          <p className="text-[#E8E3DC] font-medium">
+            {mode === 'tee' && '📍 Click to place tee position'}
+            {mode === 'pin' && '🚩 Click to place pin position'}
+            {mode === 'shot_start' && '🎯 Click shot starting position'}
+            {mode === 'shot_end' && '⛳ Click where the ball landed'}
+          </p>
         </div>
-        {summary && (
-          <div className="text-right">
-            <p className="text-slate-400 text-sm">Total SG</p>
-            <p className={`text-xl font-bold ${getStrokesGainedColor(summary.total)}`}>
-              {formatStrokesGained(summary.total)}
-            </p>
-          </div>
-        )}
+        <button
+          onClick={resetTracker}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-[#D6C8B4]/20 text-[#E8E3DC] hover:bg-[#D6C8B4]/10 transition-colors"
+        >
+          <RotateCcw className="w-4 h-4" />
+          Reset
+        </button>
       </div>
 
-      {/* Image Container */}
-      <div 
-        ref={containerRef}
-        className="relative cursor-crosshair"
+      {/* Club & Lie Selection */}
+      {(mode === 'shot_start' || mode === 'shot_end') && (
+        <div className="grid grid-cols-2 gap-4 p-4 rounded-xl bg-[#002D40]">
+          <div>
+            <label className="block text-sm text-[#5F9EA0] mb-2">Club</label>
+            <select
+              value={selectedClub}
+              onChange={(e) => setSelectedClub(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-[#D6C8B4]/20 bg-[#0A1A20] text-[#E8E3DC] focus:outline-none focus:border-[#E65722]"
+            >
+              {clubs.map(club => (
+                <option key={club} value={club}>{club}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm text-[#5F9EA0] mb-2">Lie</label>
+            <select
+              value={selectedLie}
+              onChange={(e) => setSelectedLie(e.target.value as LieType)}
+              className="w-full px-3 py-2 rounded-lg border border-[#D6C8B4]/20 bg-[#0A1A20] text-[#E8E3DC] focus:outline-none focus:border-[#E65722]"
+            >
+              {lies.map(lie => (
+                <option key={lie} value={lie}>{lie.charAt(0).toUpperCase() + lie.slice(1)}</option>
+              ))}
+            </select>
+          </div>
+          <div className="col-span-2">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isPenalty}
+                onChange={(e) => setIsPenalty(e.target.checked)}
+                className="w-4 h-4 rounded border-[#D6C8B4]/20 bg-[#0A1A20] text-[#E65722] focus:ring-[#E65722]"
+              />
+              <span className="text-sm text-[#E8E3DC]">Penalty stroke</span>
+            </label>
+          </div>
+        </div>
+      )}
+
+      {/* Image with Shot Overlay */}
+      <div
+        ref={imageRef}
         onClick={handleImageClick}
+        className="relative w-full aspect-video rounded-xl overflow-hidden cursor-crosshair border border-[#D6C8B4]/20"
+        style={{ backgroundImage: `url(${imageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
       >
-        <img
-          src={imageUrl}
-          alt={`Hole ${holeNumber}`}
-          className="w-full h-auto"
-          onLoad={handleImageLoad}
-        />
-
-        {/* Tee Marker */}
-        {teePos && (
+        {/* Tee Position */}
+        {teePosition && (
           <div
-            className="absolute w-6 h-6 -ml-3 -mt-3 bg-yellow-400 rounded-full border-2 border-white flex items-center justify-center text-xs font-bold z-10"
-            style={getMarkerStyle(teePos)}
+            className="absolute w-6 h-6 -ml-3 -mt-3 rounded-full bg-[#002D40] border-2 border-[#E8E3DC] flex items-center justify-center"
+            style={{ left: `${teePosition.x}%`, top: `${teePosition.y}%` }}
           >
-            T
+            <Circle className="w-3 h-3 text-[#E8E3DC]" />
           </div>
         )}
 
-        {/* Pin Marker */}
-        {pinPos && (
+        {/* Pin Position */}
+        {pinPosition && (
           <div
-            className="absolute w-6 h-6 -ml-3 -mt-3 bg-green-500 rounded-full border-2 border-white flex items-center justify-center z-10"
-            style={getMarkerStyle(pinPos)}
+            className="absolute w-6 h-6 -ml-3 -mt-6"
+            style={{ left: `${pinPosition.x}%`, top: `${pinPosition.y}%` }}
           >
-            🚩
+            <Flag className="w-6 h-6 text-[#E65722]" />
           </div>
         )}
 
-        {/* Shot Paths and Markers */}
-        {shots.map((shot, idx) => {
-          const category = summary?.shots[idx]?.category || 'approach'
-          const color = CATEGORY_COLORS[category as ShotCategory]
-          
-          return (
-            <div key={idx}>
-              {/* Shot line (SVG overlay) */}
-              <svg
-                className="absolute inset-0 w-full h-full pointer-events-none"
-                style={{ zIndex: 5 }}
-              >
-                <line
-                  x1={`${(shot.startPosition.x / imageSize.width) * 100}%`}
-                  y1={`${(shot.startPosition.y / imageSize.height) * 100}%`}
-                  x2={`${(shot.endPosition.x / imageSize.width) * 100}%`}
-                  y2={`${(shot.endPosition.y / imageSize.height) * 100}%`}
-                  stroke={color}
-                  strokeWidth="3"
-                  strokeOpacity="0.8"
-                />
-              </svg>
-              
-              {/* Start marker */}
-              <div
-                className="absolute w-6 h-6 -ml-3 -mt-3 rounded-full border-2 border-white flex items-center justify-center text-xs font-bold text-white z-10"
-                style={{
-                  ...getMarkerStyle(shot.startPosition),
-                  backgroundColor: color
-                }}
+        {/* Shot Lines and Markers */}
+        <svg className="absolute inset-0 w-full h-full pointer-events-none">
+          {shots.map((shot, i) => (
+            <g key={i}>
+              <line
+                x1={`${shot.startPosition.x}%`}
+                y1={`${shot.startPosition.y}%`}
+                x2={`${shot.endPosition.x}%`}
+                y2={`${shot.endPosition.y}%`}
+                stroke="#E65722"
+                strokeWidth="2"
+                strokeDasharray="4"
+              />
+              <circle
+                cx={`${shot.endPosition.x}%`}
+                cy={`${shot.endPosition.y}%`}
+                r="8"
+                fill="#E65722"
+                stroke="#E8E3DC"
+                strokeWidth="2"
+              />
+              <text
+                x={`${shot.endPosition.x}%`}
+                y={`${shot.endPosition.y}%`}
+                textAnchor="middle"
+                dominantBaseline="central"
+                fill="#E8E3DC"
+                fontSize="10"
+                fontWeight="bold"
               >
                 {shot.shotNumber}
-              </div>
-              
-              {/* End marker (small dot) */}
-              <div
-                className="absolute w-3 h-3 -ml-1.5 -mt-1.5 rounded-full border border-white z-10"
-                style={{
-                  ...getMarkerStyle(shot.endPosition),
-                  backgroundColor: color
-                }}
-              />
-            </div>
-          )
-        })}
-
-        {/* Current shot start marker */}
-        {currentShot.startPosition && placementMode === 'shot_end' && (
-          <div
-            className="absolute w-6 h-6 -ml-3 -mt-3 bg-blue-500 rounded-full border-2 border-white flex items-center justify-center text-xs font-bold text-white z-10 animate-pulse"
-            style={getMarkerStyle(currentShot.startPosition)}
-          >
-            {shots.length + 1}
-          </div>
-        )}
-
-        {/* Placement mode indicator */}
-        {placementMode && (
-          <div className="absolute top-2 left-2 bg-black/70 text-white px-3 py-1 rounded text-sm z-20">
-            {placementMode === 'tee' && 'Click to place TEE'}
-            {placementMode === 'pin' && 'Click to place PIN'}
-            {placementMode === 'shot_start' && 'Click shot START position'}
-            {placementMode === 'shot_end' && 'Click shot END position'}
-          </div>
-        )}
+              </text>
+            </g>
+          ))}
+        </svg>
       </div>
 
-      {/* Controls */}
-      <div className="p-4 border-t border-slate-700 space-y-4">
-        {/* Setup buttons (show if tee/pin not set) */}
-        {(!teePos || !pinPos) && (
-          <div className="flex gap-2">
-            <button
-              onClick={() => setPlacementMode('tee')}
-              className={`flex-1 py-2 rounded-lg font-medium ${
-                placementMode === 'tee' 
-                  ? 'bg-yellow-500 text-black' 
-                  : teePos 
-                    ? 'bg-slate-600 text-white' 
-                    : 'bg-yellow-600 text-white'
-              }`}
-            >
-              {teePos ? '✓ Tee Set' : 'Set Tee Position'}
-            </button>
-            <button
-              onClick={() => setPlacementMode('pin')}
-              className={`flex-1 py-2 rounded-lg font-medium ${
-                placementMode === 'pin' 
-                  ? 'bg-green-500 text-black' 
-                  : pinPos 
-                    ? 'bg-slate-600 text-white' 
-                    : 'bg-green-600 text-white'
-              }`}
-            >
-              {pinPos ? '✓ Pin Set' : 'Set Pin Position'}
-            </button>
+      {/* Shot List */}
+      {shots.length > 0 && (
+        <div className="rounded-xl p-4 bg-[#002D40]">
+          <h3 className="text-lg font-semibold text-[#E8E3DC] mb-4">Shot Breakdown</h3>
+          <div className="space-y-2">
+            {shots.map((shot, i) => (
+              <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-[#0A1A20] border border-[#D6C8B4]/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-[#E65722] flex items-center justify-center text-white text-sm font-bold">
+                    {shot.shotNumber}
+                  </div>
+                  <div>
+                    <p className="text-[#E8E3DC] font-medium">{shot.club}</p>
+                    <p className="text-sm text-[#5F9EA0]">
+                      {Math.round(shot.startDistanceYards)}y → {Math.round(shot.endDistanceYards)}y
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-[#5F9EA0]">{shot.startLie}</p>
+                  {shot.isPenalty && <span className="text-xs text-[#D94F3A]">+1 penalty</span>}
+                </div>
+              </div>
+            ))}
           </div>
-        )}
-
-        {/* Shot entry controls (show when calibrated) */}
-        {teePos && pinPos && (
-          <>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-slate-400 text-xs mb-1">Club</label>
-                <select
-                  value={selectedClub}
-                  onChange={(e) => setSelectedClub(e.target.value)}
-                  className="w-full bg-slate-700 border border-slate-600 text-white rounded px-3 py-2 text-sm"
-                >
-                  {CLUBS.map(club => (
-                    <option key={club} value={club}>{club}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-slate-400 text-xs mb-1">
-                  {placementMode === 'shot_end' ? 'End Lie' : 'Start Lie'}
-                </label>
-                <select
-                  value={selectedLie}
-                  onChange={(e) => setSelectedLie(e.target.value as LieType)}
-                  className="w-full bg-slate-700 border border-slate-600 text-white rounded px-3 py-2 text-sm"
-                >
-                  {LIE_OPTIONS.map(lie => (
-                    <option key={lie.value} value={lie.value}>{lie.label}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-white">
-                <input
-                  type="checkbox"
-                  checked={isPenalty}
-                  onChange={(e) => setIsPenalty(e.target.checked)}
-                  className="w-4 h-4"
-                />
-                <span className="text-sm">Penalty Stroke</span>
-              </label>
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                onClick={() => setPlacementMode('shot_start')}
-                disabled={placementMode !== null}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 text-white py-2 rounded-lg font-medium"
-              >
-                + Add Shot
-              </button>
-              {shots.length > 0 && (
-                <button
-                  onClick={removeLastShot}
-                  className="px-4 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg font-medium"
-                >
-                  Undo
-                </button>
-              )}
-            </div>
-          </>
-        )}
-
-        {/* Cancel button when in placement mode */}
-        {placementMode && (
-          <button
-            onClick={() => {
-              setPlacementMode(null)
-              setCurrentShot({})
-            }}
-            className="w-full bg-slate-600 hover:bg-slate-500 text-white py-2 rounded-lg font-medium"
-          >
-            Cancel
-          </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Strokes Gained Summary */}
-      {summary && summary.shots.length > 0 && (
-        <div className="p-4 border-t border-slate-700">
-          <h3 className="text-white font-medium mb-3">Strokes Gained Breakdown</h3>
-          
-          {/* Category breakdown */}
-          <div className="grid grid-cols-2 gap-2 mb-4">
-            {(Object.keys(summary.byCategory) as ShotCategory[]).map(cat => (
-              <div key={cat} className="bg-slate-700 rounded p-2 text-center">
-                <p className="text-slate-400 text-xs">{CATEGORY_NAMES[cat]}</p>
-                <p className={`font-bold ${getStrokesGainedColor(summary.byCategory[cat])}`}>
-                  {formatStrokesGained(summary.byCategory[cat])}
-                </p>
-              </div>
-            ))}
+      {summary && (
+        <div className="rounded-xl p-4 bg-[#002D40]">
+          <h3 className="text-lg font-semibold text-[#E8E3DC] mb-4">Strokes Gained</h3>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <div className="p-3 rounded-lg bg-[#0A1A20] text-center">
+              <p className="text-xs text-[#5F9EA0] mb-1">Off Tee</p>
+              <p className={`text-lg font-bold ${summary.sgOffTee >= 0 ? 'text-[#E65722]' : 'text-[#D94F3A]'}`}>
+                {summary.sgOffTee >= 0 ? '+' : ''}{summary.sgOffTee.toFixed(2)}
+              </p>
+            </div>
+            <div className="p-3 rounded-lg bg-[#0A1A20] text-center">
+              <p className="text-xs text-[#5F9EA0] mb-1">Approach</p>
+              <p className={`text-lg font-bold ${summary.sgApproach >= 0 ? 'text-[#E65722]' : 'text-[#D94F3A]'}`}>
+                {summary.sgApproach >= 0 ? '+' : ''}{summary.sgApproach.toFixed(2)}
+              </p>
+            </div>
+            <div className="p-3 rounded-lg bg-[#0A1A20] text-center">
+              <p className="text-xs text-[#5F9EA0] mb-1">Around Green</p>
+              <p className={`text-lg font-bold ${summary.sgAroundGreen >= 0 ? 'text-[#E65722]' : 'text-[#D94F3A]'}`}>
+                {summary.sgAroundGreen >= 0 ? '+' : ''}{summary.sgAroundGreen.toFixed(2)}
+              </p>
+            </div>
+            <div className="p-3 rounded-lg bg-[#0A1A20] text-center">
+              <p className="text-xs text-[#5F9EA0] mb-1">Putting</p>
+              <p className={`text-lg font-bold ${summary.sgPutting >= 0 ? 'text-[#E65722]' : 'text-[#D94F3A]'}`}>
+                {summary.sgPutting >= 0 ? '+' : ''}{summary.sgPutting.toFixed(2)}
+              </p>
+            </div>
+            <div className="p-3 rounded-lg bg-[#D6C8B4] text-center">
+              <p className="text-xs text-[#5F9EA0] mb-1">Total</p>
+              <p className={`text-lg font-bold ${summary.sgTotal >= 0 ? 'text-[#E65722]' : 'text-[#D94F3A]'}`}>
+                {summary.sgTotal >= 0 ? '+' : ''}{summary.sgTotal.toFixed(2)}
+              </p>
+            </div>
           </div>
-
-          {/* Shot list */}
-          <div className="space-y-2 mb-4">
-            {summary.shots.map((shot, idx) => (
-              <div key={idx} className="bg-slate-700 rounded p-2 flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2">
-                  <span 
-                    className="w-5 h-5 rounded-full flex items-center justify-center text-xs text-white"
-                    style={{ backgroundColor: CATEGORY_COLORS[shot.category] }}
-                  >
-                    {shot.shotNumber}
-                  </span>
-                  <span className="text-white">{shot.club}</span>
-                  <span className="text-slate-400">
-                    {shot.startDistanceYards}→{shot.endDistanceYards}yds
-                  </span>
-                </div>
-                <span className={`font-medium ${getStrokesGainedColor(shot.strokesGained)}`}>
-                  {formatStrokesGained(shot.strokesGained)}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          {/* Save button */}
-          {onSave && (
-            <button
-              onClick={handleSave}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-lg font-semibold"
-            >
-              Save Shot Data
-            </button>
-          )}
         </div>
       )}
     </div>

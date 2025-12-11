@@ -1,294 +1,215 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { ChevronLeft, ChevronRight, Plus, X, Clock } from 'lucide-react'
 
-type Student = { id: string; name: string }
-type LessonType = { 
-  id: string
-  name: string
-  duration_minutes: number
-  price_cents: number
-  category: string
-}
-type Booking = {
+interface Booking {
   id: string
   booking_date: string
   start_time: string
   end_time: string
   status: string
   payment_status: string
-  amount_cents: number
-  student: { id: string; name: string } | null
-  lesson_type: { name: string; duration_minutes: number; price_cents: number; category: string } | null
+  students: { name: string } | null
+  lesson_types: { name: string; price: number; duration: number } | null
 }
 
-export default function BookingCalendar({ 
-  students, 
-  lessonTypes,
-  initialBookings
-}: { 
-  students: Student[]
+interface LessonType {
+  id: string
+  name: string
+  price: number
+  duration: number
+}
+
+interface BookingCalendarProps {
+  bookings: Booking[]
   lessonTypes: LessonType[]
-  initialBookings: Booking[]
-}) {
+}
+
+export default function BookingCalendar({ bookings, lessonTypes }: BookingCalendarProps) {
+  const [currentDate, setCurrentDate] = useState(new Date())
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [bookings, setBookings] = useState<Booking[]>(initialBookings)
-  const [formData, setFormData] = useState({
-    studentId: '',
-    lessonTypeId: '',
-    date: '',
-    startTime: '09:00',
-    notes: '',
-  })
-  const router = useRouter()
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
+  const year = currentDate.getFullYear()
+  const month = currentDate.getMonth()
 
-    try {
-      const response = await fetch('/api/bookings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      })
+  const firstDayOfMonth = new Date(year, month, 1)
+  const lastDayOfMonth = new Date(year, month + 1, 0)
+  const startingDayOfWeek = firstDayOfMonth.getDay()
+  const daysInMonth = lastDayOfMonth.getDate()
 
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || 'Failed to create booking')
-      }
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
-      alert('Booking created successfully!')
-      setShowForm(false)
-      setFormData({ studentId: '', lessonTypeId: '', date: '', startTime: '09:00', notes: '' })
-      router.refresh()
-    } catch (error) {
-      console.error('Error:', error)
-      alert('Failed to create booking')
-    } finally {
-      setLoading(false)
-    }
+  const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1))
+  const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1))
+
+  const getBookingsForDate = (date: string) => {
+    return (bookings || []).filter(b => b.booking_date === date)
   }
 
-  const handleDelete = async (bookingId: string) => {
-    if (!confirm('Are you sure you want to cancel this booking?')) return
-
-    try {
-      const response = await fetch(`/api/bookings?id=${bookingId}`, {
-        method: 'DELETE',
-      })
-
-      if (!response.ok) throw new Error('Failed to delete')
-      
-      alert('Booking cancelled')
-      router.refresh()
-    } catch (error) {
-      console.error('Error:', error)
-      alert('Failed to cancel booking')
-    }
+  const formatDate = (day: number) => {
+    return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
   }
 
-  const formatPrice = (cents: number) => {
-    return `$${(cents / 100).toFixed(0)}`
+  const isToday = (day: number) => {
+    const today = new Date()
+    return day === today.getDate() && month === today.getMonth() && year === today.getFullYear()
   }
 
-  const formatTime = (time: string) => {
-    const [hours, minutes] = time.split(':')
-    const hour = parseInt(hours)
-    const ampm = hour >= 12 ? 'PM' : 'AM'
-    const displayHour = hour % 12 || 12
-    return `${displayHour}:${minutes} ${ampm}`
+  const days = []
+  for (let i = 0; i < startingDayOfWeek; i++) {
+    days.push(<div key={`empty-${i}`} className="h-24 md:h-32" />)
   }
 
-  const selectedLessonType = lessonTypes.find(lt => lt.id === formData.lessonTypeId)
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateStr = formatDate(day)
+    const dayBookings = getBookingsForDate(dateStr)
+    const isPast = new Date(dateStr) < new Date(new Date().toDateString())
 
-  // Group bookings by date
-const groupedBookings: { [date: string]: Booking[] } = {}
-;(bookings || []).forEach(booking => {
-    const date = booking.booking_date
-    if (!groupedBookings[date]) groupedBookings[date] = []
-    groupedBookings[date].push(booking)
-  })
+    days.push(
+      <div
+        key={day}
+        onClick={() => !isPast && setSelectedDate(dateStr)}
+        className={`h-24 md:h-32 border border-[#D6C8B4]/10 rounded-lg p-2 cursor-pointer transition-all ${
+          isToday(day) ? 'bg-[#E65722]/10 border-[#E65722]/30' : 'bg-[#002D40]/50 hover:bg-[#002D40]'
+        } ${isPast ? 'opacity-50 cursor-not-allowed' : ''} ${selectedDate === dateStr ? 'ring-2 ring-[#E65722]' : ''}`}
+      >
+        <div className="flex items-center justify-between mb-1">
+          <span className={`text-sm font-medium ${isToday(day) ? 'text-[#E65722]' : 'text-[#E8E3DC]'}`}>
+            {day}
+          </span>
+          {dayBookings.length > 0 && (
+            <span className="text-xs px-1.5 py-0.5 rounded-full bg-[#E65722] text-white">
+              {dayBookings.length}
+            </span>
+          )}
+        </div>
+        <div className="space-y-1 overflow-hidden">
+          {dayBookings.slice(0, 2).map((booking) => (
+            <div
+              key={booking.id}
+              className={`text-xs px-1.5 py-1 rounded truncate ${
+                booking.payment_status === 'paid'
+                  ? 'bg-[#E65722]/20 text-[#E65722]'
+                  : 'bg-[#5F9EA0]/20 text-[#5F9EA0]'
+              }`}
+            >
+              {booking.start_time?.slice(0, 5)} {booking.students?.name?.split(' ')[0]}
+            </div>
+          ))}
+          {dayBookings.length > 2 && (
+            <p className="text-xs text-[#5F9EA0]">+{dayBookings.length - 2} more</p>
+          )}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div>
-      {/* New Booking Button */}
-      <div className="mb-6">
+      {/* Calendar Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={prevMonth}
+            className="p-2 rounded-lg border border-[#D6C8B4]/20 text-[#E8E3DC] hover:bg-[#D6C8B4]/10 transition-colors"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <h2 className="text-xl font-bold text-[#E8E3DC]">
+            {monthNames[month]} {year}
+          </h2>
+          <button
+            onClick={nextMonth}
+            className="p-2 rounded-lg border border-[#D6C8B4]/20 text-[#E8E3DC] hover:bg-[#D6C8B4]/10 transition-colors"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        </div>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-lg font-medium"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium bg-[#E65722] text-white hover:bg-[#E65722]/90 transition-colors"
         >
-          {showForm ? '✕ Cancel' : '+ New Booking'}
+          <Plus className="w-4 h-4" />
+          New Booking
         </button>
       </div>
 
-      {/* Booking Form */}
-      {showForm && (
-        <div className="bg-slate-800 rounded-lg p-6 mb-8 border border-slate-700">
-          <h3 className="text-xl text-white mb-4">Create New Booking</h3>
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-white mb-2">Student *</label>
-              <select
-                required
-                value={formData.studentId}
-                onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
-                className="w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-4 py-2"
-              >
-                <option value="">Select a student</option>
-                {students.map(student => (
-                  <option key={student.id} value={student.id}>{student.name}</option>
-                ))}
-              </select>
-            </div>
+      {/* Day Headers */}
+      <div className="grid grid-cols-7 gap-2 mb-2">
+        {dayNames.map((day) => (
+          <div key={day} className="text-center text-sm font-medium text-[#5F9EA0] py-2">
+            {day}
+          </div>
+        ))}
+      </div>
 
-            <div>
-              <label className="block text-white mb-2">Lesson Type *</label>
-              <select
-                required
-                value={formData.lessonTypeId}
-                onChange={(e) => setFormData({ ...formData, lessonTypeId: e.target.value })}
-                className="w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-4 py-2"
-              >
-                <option value="">Select lesson type</option>
-                <optgroup label="Adult Lessons">
-                  {lessonTypes.filter(lt => lt.category === 'adult').map(lt => (
-                    <option key={lt.id} value={lt.id}>{lt.name} - {formatPrice(lt.price_cents)}</option>
-                  ))}
-                </optgroup>
-                <optgroup label="Junior Lessons">
-                  {lessonTypes.filter(lt => lt.category === 'junior').map(lt => (
-                    <option key={lt.id} value={lt.id}>{lt.name} - {formatPrice(lt.price_cents)}</option>
-                  ))}
-                </optgroup>
-                <optgroup label="Playing Lessons">
-                  {lessonTypes.filter(lt => lt.category === 'playing').map(lt => (
-                    <option key={lt.id} value={lt.id}>{lt.name} - {formatPrice(lt.price_cents)}</option>
-                  ))}
-                </optgroup>
-              </select>
-            </div>
+      {/* Calendar Grid */}
+      <div className="grid grid-cols-7 gap-2">
+        {days}
+      </div>
 
-            <div>
-              <label className="block text-white mb-2">Date *</label>
-              <input
-                type="date"
-                required
-                value={formData.date}
-                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                min={new Date().toISOString().split('T')[0]}
-                className="w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-4 py-2"
-              />
-            </div>
+      {/* Selected Date Details */}
+      {selectedDate && (
+        <div className="mt-6 p-4 rounded-xl bg-[#0A1A20] border border-[#D6C8B4]/10">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-[#E8E3DC]">
+              {new Date(selectedDate).toLocaleDateString('en-US', {
+                weekday: 'long',
+                month: 'long',
+                day: 'numeric'
+              })}
+            </h3>
+            <button
+              onClick={() => setSelectedDate(null)}
+              className="p-1 text-[#5F9EA0] hover:text-[#E8E3DC]"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
 
-            <div>
-              <label className="block text-white mb-2">Start Time *</label>
-              <input
-                type="time"
-                required
-                value={formData.startTime}
-                onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-                className="w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-4 py-2"
-              />
+          {getBookingsForDate(selectedDate).length > 0 ? (
+            <div className="space-y-3">
+              {getBookingsForDate(selectedDate).map((booking) => (
+                <div
+                  key={booking.id}
+                  className="flex items-center justify-between p-3 rounded-lg bg-[#002D40] border border-[#D6C8B4]/10"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-[#D6C8B4]">
+                      <Clock className="w-5 h-5 text-[#0B2D38]" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-[#E8E3DC]">{booking.students?.name}</p>
+                      <p className="text-sm text-[#5F9EA0]">
+                        {booking.start_time?.slice(0, 5)} - {booking.end_time?.slice(0, 5)} • {booking.lesson_types?.name}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span
+                      className={`text-xs px-2 py-1 rounded-full ${
+                        booking.payment_status === 'paid'
+                          ? 'bg-[#E65722]/15 text-[#E65722]'
+                          : 'bg-[#D94F3A]/15 text-[#D94F3A]'
+                      }`}
+                    >
+                      {booking.payment_status === 'paid' ? 'Paid' : 'Pending'}
+                    </span>
+                    <p className="text-sm font-medium text-[#E8E3DC] mt-1">
+                      ${booking.lesson_types?.price}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-white mb-2">Notes (optional)</label>
-              <input
-                type="text"
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                placeholder="Working on driver, etc."
-                className="w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-4 py-2"
-              />
-            </div>
-
-            {selectedLessonType && (
-              <div className="md:col-span-2 bg-slate-700 rounded-lg p-4">
-                <p className="text-emerald-400 font-semibold">
-                  {selectedLessonType.name}
-                </p>
-                <p className="text-slate-300">
-                  Duration: {selectedLessonType.duration_minutes} minutes | 
-                  Price: {formatPrice(selectedLessonType.price_cents)}
-                </p>
-              </div>
-            )}
-
-            <div className="md:col-span-2">
-              <button
-                type="submit"
-                disabled={loading}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-lg font-medium disabled:opacity-50"
-              >
-                {loading ? 'Creating...' : 'Create Booking'}
-              </button>
-            </div>
-          </form>
+          ) : (
+            <p className="text-[#5F9EA0] text-center py-4">No bookings for this date</p>
+          )}
         </div>
       )}
-
-      {/* Upcoming Bookings */}
-      <div>
-        <h3 className="text-xl text-white mb-4">📅 Upcoming Bookings</h3>
-        
-        {Object.keys(groupedBookings).length === 0 ? (
-          <div className="bg-slate-800 rounded-lg p-8 text-center">
-            <p className="text-slate-400">No upcoming bookings</p>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {Object.entries(groupedBookings).map(([date, dateBookings]) => (
-              <div key={date}>
-                <h4 className="text-lg text-emerald-400 mb-3">
-                  {new Date(date + 'T00:00:00').toLocaleDateString('en-US', {
-                    weekday: 'long',
-                    month: 'long',
-                    day: 'numeric',
-                    year: 'numeric'
-                  })}
-                </h4>
-                <div className="space-y-3">
-                  {dateBookings.map(booking => (
-                    <div 
-                      key={booking.id} 
-                      className="bg-slate-800 rounded-lg p-4 border border-slate-700 flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="text-center bg-slate-700 rounded-lg px-3 py-2">
-                          <p className="text-white font-bold">{formatTime(booking.start_time)}</p>
-                          <p className="text-slate-400 text-sm">{formatTime(booking.end_time)}</p>
-                        </div>
-                        <div>
-                          <p className="text-white font-semibold">{booking.student?.name || 'Unknown'}</p>
-                          <p className="text-slate-400 text-sm">{booking.lesson_type?.name}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className={`px-3 py-1 rounded-full text-sm ${
-                          booking.payment_status === 'paid' 
-                            ? 'bg-emerald-600 text-white' 
-                            : 'bg-yellow-600 text-white'
-                        }`}>
-                          {booking.payment_status === 'paid' ? '✓ Paid' : `Unpaid - ${formatPrice(booking.amount_cents)}`}
-                        </span>
-                        <button
-                          onClick={() => handleDelete(booking.id)}
-                          className="text-red-400 hover:text-red-300"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   )
 }

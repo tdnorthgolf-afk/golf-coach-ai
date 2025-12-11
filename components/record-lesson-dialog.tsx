@@ -1,260 +1,99 @@
 'use client'
 
-import { useState, useRef } from 'react'
-import { Mic, Upload, StopCircle } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { X, Loader2, Mic, Square } from 'lucide-react'
 
-export default function RecordLessonDialog({ 
-  studentId, 
-  studentName 
-}: { 
+interface RecordLessonDialogProps {
   studentId: string
-  studentName: string 
-}) {
-  const [open, setOpen] = useState(false)
-  const [recording, setRecording] = useState(false)
-  const [processing, setProcessing] = useState(false)
-  const [audioBlob, setAudioBlob] = useState<Blob | null>(null)
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-  const chunksRef = useRef<Blob[]>([])
+  isOpen: boolean
+  onClose: () => void
+}
+
+export default function RecordLessonDialog({ studentId, isOpen, onClose }: RecordLessonDialogProps) {
+  const [notes, setNotes] = useState('')
+  const [loading, setLoading] = useState(false)
   const router = useRouter()
 
-  const startRecording = async () => {
+  if (!isOpen) return null
+
+  const handleSave = async () => {
+    if (!notes.trim()) return
+
+    setLoading(true)
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const mediaRecorder = new MediaRecorder(stream)
-      mediaRecorderRef.current = mediaRecorder
-      chunksRef.current = []
-
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          chunksRef.current.push(e.data)
-        }
-      }
-
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
-        setAudioBlob(blob)
-        stream.getTracks().forEach(track => track.stop())
-      }
-
-      mediaRecorder.start()
-      setRecording(true)
-    } catch (error) {
-      console.error('Error starting recording:', error)
-      alert('Failed to start recording. Please check microphone permissions.')
-    }
-  }
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && recording) {
-      mediaRecorderRef.current.stop()
-      setRecording(false)
-    }
-  }
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setSelectedFiles(Array.from(e.target.files))
-    }
-  }
-
-  const handleSubmit = async () => {
-    if (!audioBlob) {
-      alert('Please record audio first')
-      return
-    }
-
-    setProcessing(true)
-
-    try {
-      // First, transcribe the audio and create lesson
-      const formData = new FormData()
-      formData.append('audio', audioBlob, 'lesson-audio.webm')
-      formData.append('studentId', studentId)
-      formData.append('studentName', studentName)
-
-      const transcribeResponse = await fetch('/api/transcribe', {
+      const response = await fetch('/api/lessons', {
         method: 'POST',
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId, notes }),
       })
 
-      if (!transcribeResponse.ok) {
-        throw new Error('Failed to process lesson')
-      }
+      if (!response.ok) throw new Error('Failed to save')
 
-      const { lesson } = await transcribeResponse.json()
-
-      // Upload any media files attached to this lesson
-      if (selectedFiles.length > 0) {
-        for (const file of selectedFiles) {
-          const mediaFormData = new FormData()
-          mediaFormData.append('file', file)
-          mediaFormData.append('studentId', studentId)
-          mediaFormData.append('lessonId', lesson.id)
-
-          await fetch('/api/upload', {
-            method: 'POST',
-            body: mediaFormData,
-          })
-        }
-      }
-
-      setOpen(false)
-      setAudioBlob(null)
-      setSelectedFiles([])
+      setNotes('')
+      onClose()
       router.refresh()
     } catch (error) {
       console.error('Error:', error)
       alert('Failed to save lesson')
     } finally {
-      setProcessing(false)
+      setLoading(false)
     }
-  }
-
-  const handleClose = () => {
-    if (recording) {
-      stopRecording()
-    }
-    setOpen(false)
-    setAudioBlob(null)
-    setSelectedFiles([])
   }
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
-      <DialogTrigger asChild>
-        <Button>
-          <Mic className="mr-2 h-4 w-4" />
-          Record Lesson
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>Record Lesson</DialogTitle>
-          <DialogDescription>
-            Record audio notes and optionally attach photos/videos from this lesson.
-          </DialogDescription>
-        </DialogHeader>
-        
-        <div className="space-y-6 py-4">
-          {/* Audio Recording */}
-          <div className="space-y-3">
-            <h4 className="text-sm font-medium">Audio Recording</h4>
-            <div className="flex items-center gap-3">
-              {!audioBlob ? (
-                <Button
-                  type="button"
-                  variant={recording ? 'destructive' : 'default'}
-                  onClick={recording ? stopRecording : startRecording}
-                  disabled={processing}
-                  className="flex-1"
-                >
-                  {recording ? (
-                    <>
-                      <StopCircle className="mr-2 h-4 w-4" />
-                      Stop Recording
-                    </>
-                  ) : (
-                    <>
-                      <Mic className="mr-2 h-4 w-4" />
-                      Start Recording
-                    </>
-                  )}
-                </Button>
-              ) : (
-                <div className="flex-1 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-primary animate-pulse"></div>
-                    <span className="text-sm text-muted-foreground">Recording saved</span>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setAudioBlob(null)
-                      chunksRef.current = []
-                    }}
-                    disabled={processing}
-                  >
-                    Re-record
-                  </Button>
-                </div>
-              )}
-            </div>
-            {recording && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse"></div>
-                Recording in progress...
-              </div>
-            )}
-          </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div className="relative w-full max-w-lg mx-4 rounded-xl p-6 bg-[#002D40] shadow-2xl">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-[#5F9EA0] hover:text-[#E8E3DC]"
+        >
+          <X className="w-5 h-5" />
+        </button>
 
-          {/* Media Upload */}
-          <div className="space-y-3">
-            <h4 className="text-sm font-medium">Attach Media (Optional)</h4>
-            <div>
-              <label htmlFor="media-upload" className="block">
-                <div className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-primary transition-colors">
-                  <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">
-                    Click to upload photos or videos
-                  </p>
-                </div>
-              </label>
-              <input
-                id="media-upload"
-                type="file"
-                multiple
-                accept="image/*,video/*"
-                className="hidden"
-                onChange={handleFileSelect}
-                disabled={processing}
-              />
-            </div>
-            {selectedFiles.length > 0 && (
-              <div className="space-y-1">
-                <p className="text-sm font-medium">{selectedFiles.length} file(s) selected:</p>
-                {selectedFiles.map((file, index) => (
-                  <p key={index} className="text-sm text-muted-foreground truncate">
-                    {file.name}
-                  </p>
-                ))}
-              </div>
-            )}
-          </div>
+        <h2 className="text-xl font-bold text-[#E8E3DC] mb-2">Record Lesson</h2>
+        <div className="h-1 w-12 rounded-full bg-[#E65722] mb-6" />
+
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-[#5F9EA0] mb-2">
+            Lesson Notes
+          </label>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={8}
+            placeholder="Enter lesson notes, observations, drills practiced, and recommendations..."
+            className="w-full px-4 py-3 rounded-xl border border-[#D6C8B4]/20 bg-[#0A1A20] text-[#E8E3DC] placeholder-[#5F9EA0] focus:outline-none focus:border-[#E65722] transition-colors resize-none"
+          />
         </div>
 
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleClose}
-            disabled={processing}
-            className="flex-1"
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-3 rounded-xl border border-[#D6C8B4]/20 text-[#E8E3DC] font-medium hover:bg-[#D6C8B4]/10 transition-colors"
           >
             Cancel
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={!audioBlob || processing}
-            className="flex-1"
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={loading || !notes.trim()}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold bg-[#E65722] text-white hover:bg-[#E65722]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {processing ? 'Processing...' : 'Save Lesson'}
-          </Button>
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              'Save Lesson'
+            )}
+          </button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   )
 }
