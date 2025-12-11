@@ -133,6 +133,12 @@ export default function StudentDashboard() {
   className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium"
 >
   📊 My Stats
+  <Link 
+  href="/student-portal/practice" 
+  className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium"
+>
+  🎯 Practice Plan
+</Link>
 </Link>
             </Link>
             <button
